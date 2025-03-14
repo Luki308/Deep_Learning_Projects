@@ -1,5 +1,5 @@
 # Create CNN to classify CINIC-10 datase using PyTorch and tutorial from https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
-#tensorboard --logdir=Project_1/runs
+# Command to run: tensorboard --logdir=Project_1/runs
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -53,11 +53,11 @@ if __name__ == "__main__":
         'model': 'BASIC',
         'lr': 0.001,
         'batch_size': 64,
-        'epochs': 10,
+        'epochs': 25,
         'early_stopping_patience': 5,
         'layers': 'basic',
-        'subset_percentage': 0.01,  # Use 1% of data
-        'use_subset': False  # Flag to enable/disable subsetting
+        'subset_percentage': 0.03,  # Use 1% of data
+        'use_subset': True  # Flag to enable/disable subsetting
     }
 
     # Define the device to be used
@@ -178,8 +178,8 @@ if __name__ == "__main__":
             train_accuracies.append(train_accuracy)
 
             # Log metrics to TensorBoard
-            writer.add_scalar('Loss/train', loss, epoch * len(trainloader) + i)       
-            writer.add_scalar('Accuracy/train', train_accuracy, epoch * len(trainloader) + i)
+            # writer.add_scalar('Loss/train', loss, epoch * len(trainloader) + i)       
+            # writer.add_scalar('Accuracy/train', train_accuracy, epoch * len(trainloader) + i)
 
             # print statistics
             running_loss += loss.item()
@@ -188,12 +188,21 @@ if __name__ == "__main__":
                 print(f"\n[Epoch:{epoch + 1}, Batch {i + 1} / {len(trainloader)}] loss: {running_loss / print_every:.3f}, accuracy: {train_accuracy:.2f}%")
                 running_loss = 0.0
 
+        # Calculate mean loss and accuracy for the epoch
+        mean_train_loss = np.mean(train_losses)
+        mean_train_accuracy = np.mean(train_accuracies)
+        
+        # Log the epoch means to TensorBoard
+        writer.add_scalar('Loss/train', mean_train_loss, epoch)
+        writer.add_scalar('Accuracy/train', mean_train_accuracy, epoch)        
+
         # Validate the network
         net.eval()
         val_loss = 0.0
         correct = 0
         total = 0
         val_accuracies = []
+        val_losses = []
 
         with torch.no_grad():
             for i, data in enumerate(valloader, 0):
@@ -202,6 +211,7 @@ if __name__ == "__main__":
                 outputs = net(images)
                 loss = critetion(outputs, labels)
                 val_loss += loss.item()
+                val_losses.append(loss.item())
                 
                 # check predictions
                 _, predicted = torch.max(outputs, 1)
@@ -211,13 +221,20 @@ if __name__ == "__main__":
                 val_accuracies.append(val_accuracy)
 
                 # Log metrics to TensorBoard
-                writer.add_scalar('Loss/validation', loss, epoch * len(valloader) + i)
-                writer.add_scalar('Accuracy/validation', val_accuracy , epoch * len(valloader) + i)
+                # writer.add_scalar('Loss/validation', loss, epoch * len(valloader) + i)
+                # writer.add_scalar('Accuracy/validation', val_accuracy , epoch * len(valloader) + i)
 
         val_loss /= len(valloader)
         val_accuracy = np.mean(val_accuracies)
         print(f"Validation Loss: {val_loss:.3f}, Validation Accuracy: {val_accuracy:.2f}%")
-   
+        
+        # Calculate mean validation loss and accuracy
+        val_loss = np.mean(val_losses)
+        val_accuracy = 100 * correct / total if total > 0 else 0
+        
+        # Log validation means to TensorBoard
+        writer.add_scalar('Loss/validation', val_loss, epoch)
+        writer.add_scalar('Accuracy/validation', val_accuracy, epoch)   
 
         # Check if validation loss improved
         if val_loss < best_val_loss:
