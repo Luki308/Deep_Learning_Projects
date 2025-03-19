@@ -2,7 +2,7 @@ import torch
 import intel_extension_for_pytorch as ipex
 import logging
 from Project_1.src.pre_trained.utils.FineTuneHelper import FineTuneHelper
-from Project_1.src.pre_trained.utils.DataHelper import DataHelper, SimpleAugmentation
+from Project_1.src.DataHelper import DataHelper, SimpleAugmentation
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(process)d - %(levelname)s: %(message)s (%(filename)s:%(lineno)d)',

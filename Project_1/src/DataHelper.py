@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Subset
 
-cinic_directory = "C:\\Users\\agata\\.cache\\kagglehub\\datasets\\mengcius\\cinic10\\versions\\1"
+cinic_directory = "Project_1/data"
 cinic_mean = [0.47889522, 0.47227842, 0.43047404]
 cinic_std = [0.24205776, 0.23828046, 0.25874835]
 

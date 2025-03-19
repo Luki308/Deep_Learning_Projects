@@ -1,0 +1,57 @@
+{
+    "config": {
+        "model": "BASIC",
+        "lr": 0.01,
+        "batch_size": 256,
+        "epochs": 50,
+        "early_stopping_patience": 5,
+        "layers": "basic",
+        "subset_percentage": 0.2
+    },
+    "num_runs": 5,
+    "train_loss_mean": 0.9598852903070583,
+    "train_loss_std": 0.07958591362351379,
+    "train_accuracy_mean": 65.80360719228199,
+    "train_accuracy_std": 3.264378097104221,
+    "val_loss_mean": 1.5209506488182176,
+    "val_loss_std": 0.05669782338150455,
+    "val_accuracy_mean": 48.28888888888889,
+    "val_accuracy_std": 1.7688665548562146,
+    "individual_results": [
+        {
+            "train_loss": 0.838865233978755,
+            "train_accuracy": 71.21090815239788,
+            "val_loss": 1.6022304968095162,
+            "val_accuracy": 46.97222222222222,
+            "model_path": "Project_1/models/BASIC/basic-layers_lr0.01_batch256_ep50_subset20pc_time-19.03-15.36.pth"
+        },
+        {
+            "train_loss": 0.8998126731791967,
+            "train_accuracy": 67.52531912758484,
+            "val_loss": 1.484411792016365,
+            "val_accuracy": 50.01111111111111,
+            "model_path": "Project_1/models/BASIC/basic-layers_lr0.01_batch256_ep50_subset20pc_time-19.03-15.52.pth"
+        },
+        {
+            "train_loss": 1.0577294700582263,
+            "train_accuracy": 61.82440779170405,
+            "val_loss": 1.5562577566630404,
+            "val_accuracy": 46.294444444444444,
+            "model_path": "Project_1/models/BASIC/basic-layers_lr0.01_batch256_ep50_subset20pc_time-19.03-16.05.pth"
+        },
+        {
+            "train_loss": 0.9877913829306482,
+            "train_accuracy": 64.60482259731617,
+            "val_loss": 1.4380239584076573,
+            "val_accuracy": 50.772222222222226,
+            "model_path": "Project_1/models/BASIC/basic-layers_lr0.01_batch256_ep50_subset20pc_time-19.03-16.21.pth"
+        },
+        {
+            "train_loss": 1.015227691388466,
+            "train_accuracy": 63.85257829240706,
+            "val_loss": 1.5238292401945088,
+            "val_accuracy": 47.394444444444446,
+            "model_path": "Project_1/models/BASIC/basic-layers_lr0.01_batch256_ep50_subset20pc_time-19.03-16.36.pth"
+        }
+    ]
+}
