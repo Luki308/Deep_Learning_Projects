@@ -10,7 +10,6 @@ torch.manual_seed(0)
 import numpy as np
 import itertools
 from tqdm import tqdm
-import os
 from datetime import datetime
 import sys
 import os
@@ -20,22 +19,33 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.
 
 from Project_1.src.DataHelper import DataHelper
 from Project_1.src.from_scratch.CNN_definiton import CNN_ours
+from Project_1.src.DataHelper import SimpleAugmentation
 
 # Define hyperparameters as a dictionary for easy logging
 config = {
-    'model': 'BASIC',
-    'lr': 0.01,  # List of learning rates to try
-    'batch_size': 32,  # List of batch sizes to try
-    'epochs': 150,
-    'early_stopping_patience': 5,
+    'model': 'BASIC_few_shots',
+    'lr': 0.01,
+    'batch_size': 256,
+    'epochs': 20,
+    'early_stopping_patience': 4,
     'layers': 'basic',
-    'subset_percentage': 0.5,
+    'subset_percentage': 0.01,
+    'weight_decay': 0.00001,
+    'dropout_rate': 0.2,
+    'augmentations': []
 }
 
 def get_run_name(config):
-    """Create a unique name for each experiment run"""
+    """Create a unique name for each experiment run FOR AUGMENTATION"""
     timestamp = datetime.now().strftime("%d.%m-%H.%M")
-    return f"{config['layers']}-layers_lr{config['lr']}_batch{config['batch_size']}_ep{config['epochs']}_subset{int(config['subset_percentage']*100)}pc"
+    if config['model'] == 'BASIC':
+        return f"htrain_{config['layers']}_lr{config['lr']}_bs{config['batch_size']}_epochs{config['epochs']}_subset{int(config['subset_percentage']*100)}pc_{timestamp}"
+    elif config['model'] == 'BASIC_regularization':
+        return f"regul_wd{config['weight_decay']}_dr{config['dropout_rate']}_epochs{config['epochs']}_subset{int(config['subset_percentage']*100)}pc_{timestamp}"
+    elif config['model'] == 'BASIC_augmented':
+        return f"augment_{config['augmentations'][0].name}_epochs{config['epochs']}_subset{int(config['subset_percentage']*100)}pc_{timestamp}"
+    else:
+        return f"default_{config['model']}_epochs{config['epochs']}_subset{int(config['subset_percentage']*100)}pc_{timestamp}"
 
 def get_hyperparameter_combinations(config):
     """Create all combinations of hyperparameters for grid search"""
@@ -44,7 +54,7 @@ def get_hyperparameter_combinations(config):
     fixed_params = {}
     
     for key, value in config.items():
-        if isinstance(value, list):
+        if isinstance(value, list) and key not in ['augmentations']:
             search_params[key] = value
         else:
             fixed_params[key] = value
@@ -68,7 +78,7 @@ def train_model(config, tuning_run_dir):
     """Train a model with the given configuration"""
     # Create a unique run name
     run_name = get_run_name(config)
-    print(f"\n\n=== Training with config: lr={config['lr']}, batch_size={config['batch_size']} ===\n")
+    print(f"\n\n=== Training with config: lr={config['lr']}, batch_size={config['batch_size']}, weight_decay={config['weight_decay']}, dropout_rate={config['dropout_rate']} ===")
     
     # Initialize TensorBoard writer to use the tuning run directory
     writer_path = os.path.join(tuning_run_dir, run_name)
@@ -76,19 +86,22 @@ def train_model(config, tuning_run_dir):
     
     # Create the network
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    net = CNN_ours().to(device)
+    net = CNN_ours(dropout_rate=config.get('dropout_rate', 0.2)).to(device)
     
     # # Log model graph
     # example_input = torch.rand(1, 3, 32, 32).to(device)
     # writer.add_graph(net, example_input)
     
     # Get data with the specific batch size
-    DataH = DataHelper(resize=32, batch_size=config['batch_size'], subset_fraction=config['subset_percentage'])
+    # augmentations = (SimpleAugmentation.RandomVerticalFlip, SimpleAugmentation.RandomHorizontalFlip, SimpleAugmentation.RandomRotation)
+    augmentations = config.get('augmentations', [])
+
+    DataH = DataHelper(resize=32, batch_size=config['batch_size'], subset_fraction=config['subset_percentage'], augmentations=augmentations)
     trainloader, valloader, testloader = DataH.get_loaders()
     
     # Define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adagrad(net.parameters(), lr=config['lr'])
+    optimizer = optim.Adagrad(net.parameters(), lr=config['lr'], weight_decay=config.get('weight_decay', 0.0001))
     
     # Training parameters
     best_val_loss = float('inf')
@@ -195,6 +208,12 @@ def train_model(config, tuning_run_dir):
     # Log hyperparameters and metrics to TensorBoard
     hparam_dict = config.copy()  # Start with all config parameters
 
+    # Add augmentations as a string of names
+    augmentations_names = [aug.name for aug in config.get('augmentations', [])]
+    string_augmentations = '_'.join(augmentations_names)
+    hparam_dict = config.copy()
+    hparam_dict.update({'augmentations': string_augmentations})
+
     # Add metrics to the hyperparameter dictionary since this is required for visualization
     hparam_dict.update({
         'train_loss': round(float(np.mean(train_losses)), 3),
@@ -220,14 +239,9 @@ def train_model(config, tuning_run_dir):
     writer.close()
     
     # Save the model
-    if 'Project_1' in os.listdir():
-        if not os.path.exists(f'Project_1/models/{config["model"]}'):
-            os.makedirs(f'Project_1/models/{config["model"]}')
-        PATH = f'Project_1/models/{config["model"]}/{run_name+'_time-'+datetime.now().strftime("%d.%m-%H.%M")}.pth'
-    else:
-        if not os.path.exists(f'models/{config["model"]}'):
-            os.makedirs(f'models/{config["model"]}')
-        PATH = f'models/{config["model"]}/{run_name}.pth'
+    if not os.path.exists(f'Project_1/models/{config["model"]}'):
+        os.makedirs(f'Project_1/models/{config["model"]}')
+    PATH = f'Project_1/models/{config["model"]}/{run_name+'_time-'+datetime.now().strftime("%d.%m-%H.%M")}.pth'
         
     torch.save(net.state_dict(), PATH)
     
@@ -260,7 +274,7 @@ if __name__ == "__main__":
     results = []
     for i, config_instance in enumerate(all_configs):
         print(f"\nTraining model {i+1}/{len(all_configs)}")
-        result = train_model(config_instance)
+        result = train_model(config_instance, tuning_run_dir)
         results.append(result)
 
     # Find best model

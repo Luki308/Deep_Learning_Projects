@@ -12,8 +12,9 @@ import copy
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
 from Project_1.src.from_scratch.CNN_training import train_model, get_run_name
+from Project_1.src.DataHelper import SimpleAugmentation
 
-def run_multiple_trainings(config, num_runs=5):
+def run_multiple_trainings(config, num_runs=3):
     """
     Run multiple trainings with the same configuration to calculate statistics.
     
@@ -86,8 +87,8 @@ def run_multiple_trainings(config, num_runs=5):
     
     # Save results to JSON file
     stats_file = os.path.join(stats_dir, f'stats_{timestamp}.json')
-    with open(stats_file, 'w') as f:
-        json.dump(stats, f, indent=4)
+    # with open(stats_file, 'w') as f:
+    #     json.dump(stats, f, indent=4)
     
     # Print summary
     print("\n===== Training Statistics =====")
@@ -101,30 +102,79 @@ def run_multiple_trainings(config, num_runs=5):
 
 if __name__ == "__main__":
     # Define the configuration to test
-    num_runs = 5
+    num_runs = 3
     config = {
-        'model': 'BASIC',
-        'lr': 0.0001,
+        'model': 'BASIC_augmented',
+        'lr': 0.01,
         'batch_size': 256,
-        'epochs': 50,
-        'early_stopping_patience': 5,
+        'epochs': 20,
+        'early_stopping_patience': 4,
         'layers': 'basic',
         'subset_percentage': 0.2,
+        'weight_decay': 0.00001,
+        'dropout_rate': 0.2,
+        'augmentations': [SimpleAugmentation.RandomErasing]
     }
+    # config = {
+    #     'model': 'BASIC_augmented',
+    #     'lr': 0.01,
+    #     'batch_size': 256,
+    #     'epochs': 20,
+    #     'early_stopping_patience': 4,
+    #     'layers': 'basic',
+    #     'subset_percentage': 0.5,
+    #     'weight_decay': 0.00001,
+    #     'dropout_rate': 0.2,
+    #     'augmentations': [SimpleAugmentation.RandomHorizontalFlip]
+    # }
 
     # Run the statistical analysis
     stats = run_multiple_trainings(config, num_runs)
 
+    # config = {
+    #     'model': 'BASIC_augmented',
+    #     'lr': 0.01,
+    #     'batch_size': 256,
+    #     'epochs': 20,
+    #     'early_stopping_patience': 4,
+    #     'layers': 'basic',
+    #     'subset_percentage': 0.5,
+    #     'weight_decay': 0.00001,
+    #     'dropout_rate': 0.2,
+    #     'augmentations': [SimpleAugmentation.RandomVerticalFlip]
+    # }
 
-    config = {
-        'model': 'BASIC',
-        'lr': 0.00001,
-        'batch_size': 256,
-        'epochs': 50,
-        'early_stopping_patience': 5,
-        'layers': 'basic',
-        'subset_percentage': 0.2,
-    }
+    # # Run the statistical analysis
+    # stats = run_multiple_trainings(config, num_runs)
 
-    # Run the statistical analysis
-    stats = run_multiple_trainings(config, num_runs)
+    # config = {
+    #     'model': 'BASIC_augmented',
+    #     'lr': 0.01,
+    #     'batch_size': 256,
+    #     'epochs': 20,
+    #     'early_stopping_patience': 4,
+    #     'layers': 'basic',
+    #     'subset_percentage': 0.5,
+    #     'weight_decay': 0.00001,
+    #     'dropout_rate': 0.2,
+    #     'augmentations': [SimpleAugmentation.RandomRotation]
+    # }
+
+    # # Run the statistical analysis
+    # stats = run_multiple_trainings(config, num_runs)
+
+    # config = {
+    #     'model': 'BASIC_augmented',
+    #     'lr': 0.01,
+    #     'batch_size': 256,
+    #     'epochs': 20,
+    #     'early_stopping_patience': 4,
+    #     'layers': 'basic',
+    #     'subset_percentage': 0.5,
+    #     'weight_decay': 0.00001,
+    #     'dropout_rate': 0.2,
+    #     'augmentations': [SimpleAugmentation.RandomErasing]
+    # }
+
+    # # Run the statistical analysis
+    # stats = run_multiple_trainings(config, num_runs)

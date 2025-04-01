@@ -177,4 +177,6 @@ cython_debug/
 # data folder
 data/
 archive_runs/
+stats/
+models/
 ```
