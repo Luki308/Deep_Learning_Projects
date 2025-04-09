@@ -3,10 +3,28 @@ from pathlib import Path
 import torchaudio
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
 def read_list(file_path):
     with open(file_path, 'r') as f:
         return set(line.strip() for line in f.readlines())
+    
+def plot_waveform(waveform, sample_rate):
+    waveform = waveform.numpy()
+
+    num_channels, num_frames = waveform.shape
+    time_axis = torch.arange(0, num_frames) / sample_rate
+
+    figure, axes = plt.subplots(num_channels, 1)
+    if num_channels == 1:
+        axes = [axes]
+    for c in range(num_channels):
+        axes[c].plot(time_axis, waveform[c], linewidth=1)
+        axes[c].grid(True)
+        if num_channels > 1:
+            axes[c].set_ylabel(f"Channel {c+1}")
+    figure.suptitle("waveform")
+    plt.show(block=False)
 
 class SpeechCommandsDataset(Dataset):
     """
@@ -25,13 +43,15 @@ class SpeechCommandsDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.file_list[idx]
-        waveform, sample_rate = torchaudio.load(path)
+        metadata = torchaudio.info(str(path))
+        print(f"Loading {path} with metadata: {metadata}")
+        waveform, sample_rate = torchaudio.load(str(path))
         label = path.parent.name  # Folder name is the label
         if self.transform:
             waveform = self.transform(waveform)
-        return waveform, label
+        return waveform, label, sample_rate
 
-def get_data_loaders(data_dir='data/train', batch_size=32, shuffle_train=True):
+def get_data_loaders(data_dir='Project_2/data/train', batch_size=32, shuffle_train=True):
     """
     Load speech command datasets and return data loaders
     
@@ -43,13 +63,23 @@ def get_data_loaders(data_dir='data/train', batch_size=32, shuffle_train=True):
     Returns:
         tuple: (train_loader, val_loader, test_loader)
     """
+    # Make sure we use absolute paths
+    data_dir = Path(data_dir).resolve()
+    
     # Read which files belong to which set
-    val_list = read_list(f'{data_dir}/validation_list.txt')
-    test_list = read_list(f'{data_dir}/testing_list.txt')
+    val_list = read_list(data_dir / 'validation_list.txt')
+    test_list = read_list(data_dir / 'testing_list.txt')
 
     # Create a dictionary to hold the file paths for each set
-    dataset_path = Path(f'{data_dir}/audio')
+    dataset_path = data_dir / 'audio'
     all_data = {'training': [], 'validation': [], 'testing': []}
+
+    # Check if the directory exists
+    if not dataset_path.exists():
+        raise FileNotFoundError(f"Dataset path does not exist: {dataset_path}")
+    
+    # Print dataset_path for debugging
+    print(f"Looking for audio files in: {dataset_path}")
 
     for audio_path in dataset_path.rglob("*.wav"):
         relative_path = audio_path.relative_to(dataset_path).as_posix()
@@ -61,6 +91,12 @@ def get_data_loaders(data_dir='data/train', batch_size=32, shuffle_train=True):
         else:
             all_data['training'].append(audio_path)
 
+    # Print counts for debugging
+    print(f"Found {len(all_data['training'])} training files")
+    print(f"Found {len(all_data['validation'])} validation files")
+    print(f"Found {len(all_data['testing'])} testing files")
+
+    print(f"{all_data['training'][:2]}")
     # Create datasets and dataloaders
     train_dataset = SpeechCommandsDataset(all_data['training'])
     val_dataset = SpeechCommandsDataset(all_data['validation'])
@@ -73,4 +109,12 @@ def get_data_loaders(data_dir='data/train', batch_size=32, shuffle_train=True):
     return train_loader, val_loader, test_loader
 
 # Example usage:
-# train_loader, val_loader, test_loader = get_data_loaders()
+if __name__ == "__main__":
+    # Assuming the data directory structure is as expected
+    train_loader, val_loader, test_loader = get_data_loaders()
+
+    # Print example training data
+    for batch in train_loader:
+        waveforms, labels, sample_rate = batch
+        print(f"Waveform shape: {waveforms.shape}, Labels: {labels}")
+        break  # Just show one batch for demonstration
