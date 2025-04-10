@@ -1,30 +1,55 @@
 import os
+import torch
+import intel_extension_for_pytorch as ipex
 from pathlib import Path
 import torchaudio
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
+import torch.nn.functional as F
+
+
+def collate_fn(batch):
+    """
+    Pads waveforms in the batch to the longest waveform length.
+    """
+    waveforms, labels, sample_rates = zip(*batch)
+
+    # Find max length
+    max_length = max(waveform.shape[1] for waveform in waveforms)
+
+    # Pad all waveforms
+    padded_waveforms = []
+    for waveform in waveforms:
+        pad_amount = max_length - waveform.shape[1]
+        padded_waveform = F.pad(waveform, (0, pad_amount))  # Pad last dimension (time)
+        padded_waveforms.append(padded_waveform)
+
+    # Stack into tensors
+    waveforms_tensor = torch.stack(padded_waveforms)
+    sample_rates_tensor = torch.tensor(sample_rates)  # optional, or just pass along
+    return waveforms_tensor, labels, sample_rates_tensor
 
 def read_list(file_path):
     with open(file_path, 'r') as f:
         return set(line.strip() for line in f.readlines())
     
-def plot_waveform(waveform, sample_rate):
-    waveform = waveform.numpy()
-
-    num_channels, num_frames = waveform.shape
-    time_axis = torch.arange(0, num_frames) / sample_rate
-
-    figure, axes = plt.subplots(num_channels, 1)
-    if num_channels == 1:
-        axes = [axes]
-    for c in range(num_channels):
-        axes[c].plot(time_axis, waveform[c], linewidth=1)
-        axes[c].grid(True)
-        if num_channels > 1:
-            axes[c].set_ylabel(f"Channel {c+1}")
-    figure.suptitle("waveform")
-    plt.show(block=False)
+# def plot_waveform(waveform, sample_rate):
+#     waveform = waveform.numpy()
+#
+#     num_channels, num_frames = waveform.shape
+#     time_axis = torch.arange(0, num_frames) / sample_rate
+#
+#     figure, axes = plt.subplots(num_channels, 1)
+#     if num_channels == 1:
+#         axes = [axes]
+#     for c in range(num_channels):
+#         axes[c].plot(time_axis, waveform[c], linewidth=1)
+#         axes[c].grid(True)
+#         if num_channels > 1:
+#             axes[c].set_ylabel(f"Channel {c+1}")
+#     figure.suptitle("waveform")
+#     plt.show(block=False)
 
 class SpeechCommandsDataset(Dataset):
     """
@@ -51,7 +76,7 @@ class SpeechCommandsDataset(Dataset):
             waveform = self.transform(waveform)
         return waveform, label, sample_rate
 
-def get_data_loaders(data_dir='Project_2/data/train', batch_size=32, shuffle_train=True):
+def get_data_loaders(data_dir='../../data/train', batch_size=32, shuffle_train=True):
     """
     Load speech command datasets and return data loaders
     
@@ -102,14 +127,15 @@ def get_data_loaders(data_dir='Project_2/data/train', batch_size=32, shuffle_tra
     val_dataset = SpeechCommandsDataset(all_data['validation'])
     test_dataset = SpeechCommandsDataset(all_data['testing'])
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle_train)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle_train, collate_fn=collate_fn)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=collate_fn)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=collate_fn)
     
     return train_loader, val_loader, test_loader
 
 # Example usage:
 if __name__ == "__main__":
+
     # Assuming the data directory structure is as expected
     train_loader, val_loader, test_loader = get_data_loaders()
 
