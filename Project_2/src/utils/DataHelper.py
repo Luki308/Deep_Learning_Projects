@@ -1,11 +1,11 @@
 import os
 import torch
-import intel_extension_for_pytorch as ipex
+# import intel_extension_for_pytorch as ipex
 from pathlib import Path
 import torchaudio
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
 
@@ -34,23 +34,6 @@ def read_list(file_path):
     with open(file_path, 'r') as f:
         return set(line.strip() for line in f.readlines())
     
-# def plot_waveform(waveform, sample_rate):
-#     waveform = waveform.numpy()
-#
-#     num_channels, num_frames = waveform.shape
-#     time_axis = torch.arange(0, num_frames) / sample_rate
-#
-#     figure, axes = plt.subplots(num_channels, 1)
-#     if num_channels == 1:
-#         axes = [axes]
-#     for c in range(num_channels):
-#         axes[c].plot(time_axis, waveform[c], linewidth=1)
-#         axes[c].grid(True)
-#         if num_channels > 1:
-#             axes[c].set_ylabel(f"Channel {c+1}")
-#     figure.suptitle("waveform")
-#     plt.show(block=False)
-
 class SpeechCommandsDataset(Dataset):
     """
     Custom dataset for loading speech command audio files.
@@ -68,15 +51,13 @@ class SpeechCommandsDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.file_list[idx]
-        metadata = torchaudio.info(str(path))
-        print(f"Loading {path} with metadata: {metadata}")
         waveform, sample_rate = torchaudio.load(str(path))
         label = path.parent.name  # Folder name is the label
         if self.transform:
             waveform = self.transform(waveform)
         return waveform, label, sample_rate
 
-def get_data_loaders(data_dir='../../data/train', batch_size=32, shuffle_train=True):
+def get_data_loaders(data_dir='Project_2/data/train', batch_size=32, shuffle_train=True):
     """
     Load speech command datasets and return data loaders
     
@@ -135,12 +116,15 @@ def get_data_loaders(data_dir='../../data/train', batch_size=32, shuffle_train=T
 
 # Example usage:
 if __name__ == "__main__":
-
-    # Assuming the data directory structure is as expected
+    # Instead of trying to set the backend, ensure necessary dependencies are installed
+    print(f"Available torchaudio backends: {torchaudio.list_audio_backends()}")
+    
+    # Test if you can load an audio file
+    print("Attempting to load data...")
     train_loader, val_loader, test_loader = get_data_loaders()
 
     # Print example training data
     for batch in train_loader:
-        waveforms, labels, sample_rate = batch
+        waveforms, labels, sample_rates = batch
         print(f"Waveform shape: {waveforms.shape}, Labels: {labels}")
         break  # Just show one batch for demonstration
