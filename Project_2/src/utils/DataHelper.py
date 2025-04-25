@@ -143,4 +143,5 @@ if __name__ == "__main__":
     for batch in train_loader:
         waveforms, labels, sample_rate = batch
         print(f"Waveform shape: {waveforms.shape}, Labels: {labels}")
+        print(sample_rate)
         break  # Just show one batch for demonstration
