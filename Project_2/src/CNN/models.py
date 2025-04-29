@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio
 import torchaudio.transforms as T
-
+from torch.utils.tensorboard import SummaryWriter
 
 class AudioCNN(torch.nn.Module):
     def __init__(self, num_classes, n_mels=64):

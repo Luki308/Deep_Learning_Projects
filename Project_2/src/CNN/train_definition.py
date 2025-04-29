@@ -5,8 +5,8 @@ from tqdm import tqdm
 import os
 
 
-def train_model(model, train_loader, val_loader, num_epochs=10, learning_rate=0.001, 
-                file_path='training_stats.csv', weight_decay=1e-5):
+def train_model(model, train_loader, val_loader, which_iteration, num_epochs=10, learning_rate=0.001, 
+                file_path='training_stats.csv', weight_decay=1e-4, ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     
@@ -123,12 +123,12 @@ def train_model(model, train_loader, val_loader, num_epochs=10, learning_rate=0.
     dataframe.to_csv(file_path, index=False)
     
     # Plot training/validation curves
-    plot_training_curves(train_losses, val_losses, train_accuracies, val_accuracies)
+    plot_training_curves(train_losses, val_losses, train_accuracies, val_accuracies, which_iteration)
     
     return train_losses, train_accuracies, val_losses, val_accuracies
 
 
-def plot_training_curves(train_losses, val_losses, train_accuracies, val_accuracies):
+def plot_training_curves(train_losses, val_losses, train_accuracies, val_accuracies, which_iteration = 0):
     """Plot training and validation loss/accuracy curves"""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
     
@@ -154,12 +154,12 @@ def plot_training_curves(train_losses, val_losses, train_accuracies, val_accurac
     ax2.grid(True)
     
     plt.tight_layout()
-    plt.savefig('training_curves.png')
+    plt.savefig(f'Project_2/img/training_curves_{which_iteration}.png')
     # plt.show()
 
 
-def evaluate_model(model, test_loader, train_loader):
-    """(DOESN'T WORK YET) Evaluate the model on the test set"""
+def evaluate_model(model, test_loader, train_loader = None, stats_path='training_stats.csv', which_iteration=1):
+    """Evaluate the model on the test set"""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
@@ -168,6 +168,8 @@ def evaluate_model(model, test_loader, train_loader):
     total = 0
     
     # Create confusion matrix
+    if train_loader is None:
+        train_loader = test_loader
     train_dataset = train_loader.dataset
     num_classes = train_dataset.num_classes
     confusion_matrix = torch.zeros(num_classes, num_classes)
@@ -192,11 +194,28 @@ def evaluate_model(model, test_loader, train_loader):
     accuracy = 100.0 * correct / total
     print(f"Test Accuracy: {accuracy:.2f}%")
 
+    # Calculate balanced accuracy (correct way for multi-class)
+    true_positives = confusion_matrix.diag()
+    support = confusion_matrix.sum(1)  # (TP + FN)
+
+    # Avoid division by zero
+    recall_per_class = true_positives / support.clamp(min=1)
+
+    balanced_accuracy = recall_per_class.mean() * 100  # Convert to percentage
+    print(f"Test Balanced Accuracy: {balanced_accuracy:.2f}%")
+
     # Add accuracy to training_stats.csv
-    if os.path.exists('training_stats.csv'):
-        stats_df = pd.read_csv('training_stats.csv')
+    if os.path.exists(stats_path):
+        stats_df = pd.read_csv(stats_path)
         stats_df['test_accuracy'] = accuracy
-        stats_df.to_csv('training_stats.csv', index=False)
+        stats_df['test_balanced_accuracy'] = balanced_accuracy.mean().item()
+        stats_df.to_csv(stats_path, index=False)
+    else:
+        df_to_save = pd.DataFrame({
+            'test_accuracy': [accuracy],
+            'test_balanced_accuracy': [balanced_accuracy.mean().item()]
+        })
+        df_to_save.to_csv(stats_path, index=False)
 
     # Plot confusion matrix
     plt.figure(figsize=(12, 10))
@@ -228,10 +247,10 @@ def evaluate_model(model, test_loader, train_loader):
     plt.xlabel('Predicted label', labelpad=10)
     
     # Save figure with higher DPI and ensure all elements are within bounds
-    plt.savefig('confusion_matrix.png', bbox_inches='tight', dpi=150)
+    plt.savefig(f'Project_2/img/confusion_matrix_{which_iteration}.png', bbox_inches='tight', dpi=150)
     # plt.show()
     
-    return accuracy, confusion_matrix
+    return accuracy, balanced_accuracy, confusion_matrix
 
 
 def main():

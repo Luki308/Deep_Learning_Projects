@@ -179,4 +179,6 @@ data/
 archive_runs/
 stats/
 models/
+Project_2/results/wav2vec/
+Project_2/src/temp
 ```

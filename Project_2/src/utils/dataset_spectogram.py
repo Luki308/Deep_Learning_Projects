@@ -27,11 +27,10 @@ class SpeechCommandsSpectrogramDataset(Dataset):
         # Create a decibel converter
         self.amp_to_db = T.AmplitudeToDB()
         
-        # Get unique label names and create a mapping to indices
-        
-        self.labels = sorted(list(set(path.parent.name for path in file_list)))
-        if '_background_noise_' not in self.labels:
-            self.labels.insert(0, '_background_noise_')
+        # Define the target classes and special categories
+        self.target_classes = ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go"]
+        self.labels = self.target_classes + ["unknown", "silence"]
+        # Map original folder names to our target labels
         self.label_to_index = {label: i for i, label in enumerate(self.labels)}
         
         # If standardization is enabled, compute dataset statistics
@@ -90,8 +89,15 @@ class SpeechCommandsSpectrogramDataset(Dataset):
         if self.standardize:
             mel_spec_db = (mel_spec_db - self.spec_mean) / self.spec_std
         
-        # Get the label
-        label = path.parent.name
+        # Get the original label from folder name
+        original_label = path.parent.name
+        
+        # Map to target labels based on the requirements
+        if original_label in self.target_classes or original_label == "silence":
+            label = original_label
+        else:
+            label = "unknown"
+            
         label_idx = self.label_to_index[label]
         
         return mel_spec_db, label_idx, label
