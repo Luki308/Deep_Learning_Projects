@@ -35,20 +35,6 @@ class ToLogMelSpec(nn.Module):
         return mel_db
 
 
-def collate_fn_spec_1(batch):
-    specs, labels = zip(*batch)
-    max_len = max(spec.shape[0] for spec in specs)
-
-    padded_specs = []
-    for spec in specs:
-        pad_amt = max_len - spec.shape[0]
-        padded = F.pad(spec, (0, 0, 0, pad_amt))  # pad along time (rows)
-        padded_specs.append(padded)
-
-    specs_tensor = torch.stack(padded_specs)  # [B, T, F]
-    return specs_tensor, labels
-
-
 def collate_fn_spec(batch, target_time_steps=500):
     specs, labels = zip(*batch)
     padded_specs = []
@@ -57,7 +43,7 @@ def collate_fn_spec(batch, target_time_steps=500):
         t, f = spec.shape
         if t < target_time_steps:
             pad_amt = target_time_steps - t
-            padded = F.pad(spec, (0, 0, 0, pad_amt))  # Pad in time dimension
+            padded = F.pad(spec, (0, 0, 0, pad_amt))  # pad along time (rows)
         else:
             padded = spec[:target_time_steps, :]
         padded_specs.append(padded)
@@ -84,27 +70,6 @@ def assign_label(path):
         return "unknown"
 
 
-# class SpeechCommandsDataset(Dataset):
-#     def __init__(self, file_list, transform=None):
-#         self.file_list = file_list
-#         self.transform = transform
-#
-#     def __len__(self):
-#         return len(self.file_list)
-#
-#     def __getitem__(self, idx):
-#         path = self.file_list[idx]
-#         waveform, sample_rate = torchaudio.load(str(path))
-#         #print("raw waveform:", waveform.shape)
-#         label = assign_label(path)
-#
-#         if self.transform:
-#             spec = self.transform(waveform)
-#         else:
-#             raise ValueError("Transform (e.g. ToLogMelSpec) is required for this model.")
-#
-#         return spec, label
-
 class SpeechCommandsDataset(Dataset):
     def __init__(self, file_list, transform=None):
         self.file_list = file_list
@@ -130,38 +95,6 @@ class SpeechCommandsDataset(Dataset):
 
     def targets_used(self):
         return [assign_label(path) for path in self.file_list]
-
-
-def get_data_loaders_1(data_dir='../../data/train', batch_size=32, shuffle_train=True):
-    data_dir = Path(data_dir).resolve()
-
-    val_list = read_list(data_dir / 'validation_list.txt')
-    test_list = read_list(data_dir / 'testing_list.txt')
-
-    dataset_path = data_dir / 'audio'
-    all_data = {'training': [], 'validation': [], 'testing': []}
-
-    for audio_path in dataset_path.rglob("*.wav"):
-        relative_path = audio_path.relative_to(dataset_path).as_posix()
-        if relative_path in val_list:
-            all_data['validation'].append(audio_path)
-        elif relative_path in test_list:
-            all_data['testing'].append(audio_path)
-        else:
-            all_data['training'].append(audio_path)
-
-    # Add log-mel transform
-    mel_transform = ToLogMelSpec()
-
-    train_dataset = SpeechCommandsDataset(all_data['training'], transform=mel_transform)
-    val_dataset = SpeechCommandsDataset(all_data['validation'], transform=mel_transform)
-    test_dataset = SpeechCommandsDataset(all_data['testing'], transform=mel_transform)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle_train, collate_fn=collate_fn_spec)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, collate_fn=collate_fn_spec)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=collate_fn_spec)
-
-    return train_loader, val_loader, test_loader
 
 
 def stratified_subset(dataset, subset_fraction):
@@ -213,12 +146,11 @@ def get_data_loaders_2(data_dir='../../data/train', batch_size=32, shuffle_train
 
 
 
-    # Print counts for debugging
+    # print counts for debugging
     logging.info(f"Found {len(all_data['training'])} training files from classes: {target_classes or 'all'}")
     logging.info(f"Found {len(all_data['validation'])} validation files")
     logging.info(f"Found {len(all_data['testing'])} testing files")
 
-    # Add log-mel transform
     mel_transform = ToLogMelSpec()
 
     train_dataset = SpeechCommandsDataset(all_data['training'], transform=mel_transform)
@@ -263,19 +195,17 @@ def encode_labels(labels, label_to_idx):
     return torch.tensor([label_to_idx[label] for label in labels])
 
 
-# Example usage:
+# example
 if __name__ == "__main__":
 
-    # Assuming the data directory structure is as expected
     train_loader, val_loader, test_loader = get_data_loaders_2(subset_fraction=0.1)
     i = 0
     print(f"Number of training files: {len(train_loader)}")
 
-    # Print example training data
     for batch in train_loader:
         specs, labels = batch
         print(f"Waveform shape: {specs.shape}, Labels: {labels}")
         print(specs[0].mean(), specs[0].std(), specs[0].shape)
         i += 1
         if i == 1:
-            break  # Just show one batch for demonstration
+            break  # just show one batch for demonstration

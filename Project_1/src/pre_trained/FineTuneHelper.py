@@ -32,6 +32,7 @@ class FineTuneHelper:
             os.makedirs(f'tensorboard_runs/{self.model_name}')
         self.writer = SummaryWriter(f'tensorboard_runs/{self.model_name}/{run_name}')
 
+
     def _load_model(self, model_name, weights):
         """Load pre-trained model and set classifier to right amount of classes"""
         model = torch.hub.load("pytorch/vision", model_name, weights=weights)

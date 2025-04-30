@@ -3,7 +3,7 @@ from pathlib import Path
 import torchaudio
 import os
 
-from Project_2.src.utils.DataTry import read_list, assign_label
+from Project_2.src.utils.DataHelperForTransformers import read_list, assign_label
 
 
 def split_and_save_audio(file_path, output_path, clip_duration_sec=1.0, frac_moved=0.0):

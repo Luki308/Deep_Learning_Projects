@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import pickle
@@ -7,17 +6,16 @@ from datetime import datetime
 import intel_extension_for_pytorch as ipex
 import numpy as np
 import torch
-from sklearn.metrics import confusion_matrix
 from torch import nn, optim
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
-from Project_2.src.transformer.TransformerTSTF import SpectrogramTransformerTSTF
-from Project_2.src.utils.DataTry import encode_labels, build_label_mapping, get_data_loaders_2
+from Project_2.src.transformer.CnnTransformer import CNNTransformer
+from Project_2.src.utils.DataHelperForTransformers import encode_labels, build_label_mapping, get_data_loaders_2
 
 torch.manual_seed(0)
 
-logging.basicConfig(filename=f'runs/TSTF/{datetime.now().strftime("%d.%m-%H.%M")}.log', filemode='a',
+logging.basicConfig(filename=f'runs/CT/{datetime.now().strftime("%d.%m-%H.%M")}.log', filemode='a',
                     level=logging.INFO,
                     format='%(asctime)s - %(process)d - %(levelname)s: %(message)s (%(filename)s:%(lineno)d)',
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -40,10 +38,9 @@ def train_one_epoch(model, device, loader, optimizer, criterion, label_to_idx, d
             print(f"{name} is frozen")
 
     for specs, labels in tqdm(loader):
-        # Move data to device. specs: [B, T, F]
         specs = specs.to(device)
-        #print(specs.shape)
-        # Encode labels from strings to integers
+        # print(specs.shape)
+        # encode to integers
         targets = encode_labels(labels, label_to_idx).to(device)
 
         optimizer.zero_grad()
@@ -68,9 +65,9 @@ def validate_one_epoch(model, device, loader, criterion, label_to_idx, dtype, co
     running_loss = 0.0
     correct = 0
     total = 0
-    conf_matrix =None
+    conf_matrix = None
     if conf:
-        conf_matrix=np.zeros((config['num_classes'], config['num_classes']))
+        conf_matrix = np.zeros((config['num_classes'], config['num_classes']))
 
     with torch.no_grad(), torch.amp.autocast('xpu', enabled=True, dtype=dtype,
                                              cache_enabled=False):
@@ -96,7 +93,7 @@ def validate_one_epoch(model, device, loader, criterion, label_to_idx, dtype, co
 
 
 config = {
-    'model': 'TSTF',
+    'model': 'CT',
     'batch_size': 32,
     'subset_fraction': None,
     'learning_rate': 1e-3,
@@ -107,8 +104,8 @@ config = {
     'num_heads': 8,
     'num_layers': 2,
     'num_classes': 12,
-    'target_subset': ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go", "silence", "unknown"], #, "up", "down", "left", "right", "on", "off", "stop", "go",
-    'save_name': f'{datetime.now().strftime("%d.%m-%H.%M")}-TSTF.pth'
+    'target_subset': ["yes", "no", "up", "down", "left", "right", "on", "off", "stop", "go", "silence", "unknown"],
+    'save_name': f'{datetime.now().strftime("%d.%m-%H.%M")}-CNNT.pth'
 
 }
 
@@ -121,30 +118,25 @@ def run():
 
     num_epochs = config['num_epochs']
 
-    # Device setup
     device = torch.device("xpu" if torch.xpu.is_available() else "cpu")
     dtype = torch.float16 if torch.xpu.is_available() else torch.bfloat16
-    # Get data loaders
+
     train_loader, val_loader, test_loader = get_data_loaders_2(batch_size=config['batch_size'],
                                                                target_classes=config['target_subset'],
                                                                subset_fraction=config['subset_fraction'])
 
-    # Build label mapping based on training set labels
     label_to_idx = build_label_mapping(train_loader)
     logging.info(f"Label mapping{label_to_idx}")
 
-    # Initialize model: time_steps should roughly match your spectrogram length.
-    # If your audio duration is fixed, you may choose a constant value.
-    # Here, assuming padded to 500 time steps.
-    model = SpectrogramTransformerTSTF(time_steps=500, freq_bins=64, dim=config['dim'], num_heads=config['num_heads'],
-                                       num_layers=config['num_layers'],
-                                       num_classes=config[
-                                           'num_classes'])  # frec_bins must match n_mels from ToLogMelSpec
+    model = CNNTransformer(time_steps=500, freq_bins=64, embed_dim=config['dim'], num_heads=config['num_heads'],
+                           num_layers=config['num_layers'],
+                           num_classes=config['num_classes'])  # frec_bins must match n_mels from ToLogMelSpec
+
     model = model.to(device)
 
-    #writer.add_graph(model, torch.randn([32, 500, 64], device=device))
+    # writer.add_graph(model, torch.randn([32, 500, 64], device=device))
 
-    # Optimizer & loss function
+    # optimizer & loss
     optimizer = optim.AdamW(model.parameters(), lr=config['learning_rate'], weight_decay=config['weight_decay'])
     criterion = nn.CrossEntropyLoss()
     patience = config['early_stopping_patience']
@@ -183,7 +175,8 @@ def run():
     logging.info(f"Best val loss: {best_val_loss:.4f}, best val acc: {best_val_acc:.4f}")
     torch.save(best_model, config['save_name'])
     model.load_state_dict(torch.load(config['save_name']))
-    test_loss, test_acc, conf_matrix = validate_one_epoch(model, device, test_loader, criterion, label_to_idx, dtype, conf=True)
+    test_loss, test_acc, conf_matrix = validate_one_epoch(model, device, test_loader, criterion, label_to_idx, dtype,
+                                                          conf=True)
 
     writer.add_hparams(
         {
@@ -199,14 +192,13 @@ def run():
     logging.info(
         f"Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.4f}")
     logging.info(config)
-    with open(f'{datetime.now().strftime("%d.%m-%H.%M")}matrix.pickle', 'wb') as f:
+    with open(f'CT{datetime.now().strftime("%d.%m-%H.%M")}matrix.pickle', 'wb') as f:
         pickle.dump((conf_matrix, label_to_idx), f)
 
 
 def main():
-    torch.manual_seed(0)
-    heads = [16]
-    layers = [1]
+    heads=[16]
+    layers=[1]
     for layer in layers:
         config['num_layers'] = layer
         for head in heads:
