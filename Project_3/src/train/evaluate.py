@@ -12,8 +12,10 @@ from Project_3.src.model.ddim import DDIM
 # os.makedirs(f"samples/{timestamp}", exist_ok=True)
 
 # Configuration
-CHECKPOINT = "checkpoints/2025-05-29_12-08/ddim_final.pth"
-SAVE_PATH = "checkpoints/2025-05-29_12-08/ddim_sample.png"
+folder= '2025-06-01_01-14'
+steps = 50
+CHECKPOINT = f"checkpoints/{folder}/ddim_final.pth"
+SAVE_PATH = f"checkpoints/{folder}/ddim_sample_s{steps}.png"
 DEVICE = torch.device("xpu" if torch.xpu.is_available() else "cpu")
 SAMPLE_SHAPE = (16, 3, 64, 64)
 
@@ -26,7 +28,7 @@ def main():
 
     # Sample images
     with torch.no_grad():
-        samples = ddim.sample(shape=SAMPLE_SHAPE, steps=50)
+        samples = ddim.sample(shape=SAMPLE_SHAPE, steps=steps)
 
     # Save grid
     vutils.save_image(samples, SAVE_PATH, nrow=4, normalize=True)
