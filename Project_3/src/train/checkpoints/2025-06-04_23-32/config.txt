@@ -1,0 +1,2 @@
+{'BATCH_SIZE': 32, 'IMAGE_SIZE': 64, 'LR': 0.0002, 'EPOCHS': 25, 'TIMESTEPS': 1000, 'SUBSET': None, 'DEVICE': device(type='xpu'), 'CHECKPOINT': 'checkpoints/2025-06-04_19-54/ddim_final.pth'}
+loss l1 instead of mse
