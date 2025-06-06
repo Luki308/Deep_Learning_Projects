@@ -32,7 +32,7 @@ class DDIM(nn.Module):
             self.sqrt_one_minus_alphas_cumprod[t][:, None, None, None] * noise
         )
         pred_noise = self.model(x_t, t)
-        return nn.functional.mse_loss(pred_noise, noise)
+        return nn.functional.l1_loss(pred_noise, noise)
 
     @torch.no_grad()
     def sample(self, shape, eta=0.0, steps=50):

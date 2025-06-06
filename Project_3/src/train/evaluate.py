@@ -12,7 +12,7 @@ from Project_3.src.model.ddim import DDIM
 # os.makedirs(f"samples/{timestamp}", exist_ok=True)
 
 # Configuration
-folder= '2025-06-01_01-14'
+folder= '2025-06-05_13-08'
 steps = 50
 CHECKPOINT = f"checkpoints/{folder}/ddim_final.pth"
 SAVE_PATH = f"checkpoints/{folder}/ddim_sample_s{steps}.png"

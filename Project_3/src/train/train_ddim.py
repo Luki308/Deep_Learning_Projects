@@ -25,7 +25,7 @@ config = {"BATCH_SIZE": 32,
           "TIMESTEPS": 1000,
           "SUBSET": None,
           "DEVICE": torch.device("xpu" if torch.xpu.is_available() else "cpu"),
-          "CHECKPOINT": "checkpoints/2025-06-01_01-14/ddim_final.pth"
+          "CHECKPOINT": None #"checkpoints/2025-06-04_23-32/ddim_final.pth"
 }
 # ---- Dataset ----
 transform = transforms.Compose(
