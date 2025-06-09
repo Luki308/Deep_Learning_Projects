@@ -182,3 +182,5 @@ models/
 Project_2/results/wav2vec/
 Project_2/src/temp
 ```
+Project_3/src/train/checkpoints/2025-06-04_23-32/ddim_sample_s50.png
+*.csv
