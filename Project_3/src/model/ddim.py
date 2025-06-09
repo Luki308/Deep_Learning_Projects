@@ -35,9 +35,13 @@ class DDIM(nn.Module):
         return nn.functional.l1_loss(pred_noise, noise)
 
     @torch.no_grad()
-    def sample(self, shape, eta=0.0, steps=50):
+    def sample(self, shape, eta=0.0, steps=50, noise=None):
         device = next(self.parameters()).device
-        x = torch.randn(shape, device=device)
+        if noise is None:
+            x = torch.randn(shape, device=device)
+        else:
+            x = noise.to(device)
+            
         time_range = torch.linspace(self.timesteps - 1, 0, steps, dtype=torch.long).to(device)
 
         for i, t in enumerate(time_range):

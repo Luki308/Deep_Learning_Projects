@@ -25,7 +25,7 @@ config = {"BATCH_SIZE": 32,
           "TIMESTEPS": 1000,
           "SUBSET": None,
           "DEVICE": torch.device("xpu" if torch.xpu.is_available() else "cpu"),
-          "CHECKPOINT": None #"checkpoints/2025-06-04_23-32/ddim_final.pth"
+          "CHECKPOINT": None #"checkpoints/2025-06-05_13-08/ddim_epoch_30.pth"
 }
 # ---- Dataset ----
 transform = transforms.Compose(
@@ -46,6 +46,7 @@ def main():
     file_path = f"checkpoints/{timestamp}/config.txt"
     with open(file_path, 'a') as file:
         file.write(f"{config}")
+        file.write("loss l1")
 
     # ---- Model ----
     unet = UNet(in_channels=3, out_channels=3).to(config["DEVICE"])
